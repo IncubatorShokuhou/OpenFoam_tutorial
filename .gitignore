@@ -1,0 +1,11 @@
+downloads/
+local/
+build/
+work/
+logs/
+output/
+__pycache__/
+*.pyc
+*.log
+*.foam
+.venv/
