@@ -1,0 +1,18 @@
+# 数据说明
+
+这个目录演示 WRF 的 `wrfout` 怎样进景山网格。NetCDF 是合成的，不是一次 WRF 预报。
+
+## 气象样本
+
+- 文件：`inputs/wrfout_d01_synthetic.nc`
+- 全局属性 `tutorial_sample` 的值是 `synthetic wrfout-format NetCDF, not a WRF forecast`
+- 质量点 5 × 4 × 5，`DX` 150 m，`DY` 120 m
+- 经纬度由 EPSG:32650 反算。原点东坐标 447435 m，北坐标 4419195 m。局部 x 回到 0 m 和 150 m 这一列
+- 文件里的 `MAP_PROJ` 不读
+- 时间字符串写成 2025-01-15 00:00:00 和 01:00:00。求解器时间是 0 s 和 120 s
+- `./Allrun` 消错位后写成 `inputs/boundary.csv`。`HFX` 的域平均是 18 W/m² 然后 10 W/m²
+- 许可：本仓库示例，不是 WRF 或气象机构的产品
+
+## 地形和粗糙度
+
+和 `examples/jingshan_openmeteo` 相同。DEM 运行时裁剪。粗糙度是 ESA WorldCover 2021，CC BY 4.0。

@@ -1,0 +1,21 @@
+# Blank observation template for tools/csv_obs_to_boundary.py.
+# Delete these comment lines only if you want. Lines starting with # are ignored.
+# id: station name, ASCII, constant lat/lon for that id.
+# time: UTC, 2025-01-15T00:00:00Z. Map each distinct time with --solver-times.
+# lat, lon: WGS84 degrees. Pass --epsg --origin-x --origin-y. The script does not guess a CRS.
+# Vertical coordinate, the same choice on every row:
+#   height_agl_m  metres above ground, must be >= 0.5
+#   height_asl_m and surface_asl_m  metres above sea level, both required together
+#   pressure_hpa and surface_pressure_hpa  hPa. Height is (R T / g) ln(ps/p), T absolute.
+# Temperature, one column: t_c Celsius, t_k Kelvin, or theta_k potential temperature.
+# Wind, one pair: u_ms and v_ms (east, north), or wind_speed_ms and wind_dir_deg.
+#   wind_dir_deg is meteorological, the direction the wind comes FROM, degrees clockwise from north.
+# Humidity, one column: q_kgkg, rh_percent, or dewpoint_c. rh and dewpoint need a pressure.
+# Optional: w_ms (default 0), pressure_hpa when height is the vertical coordinate,
+#   k_m2s2 and epsilon_m2s3 together, or ti as a fraction (0.12 = 12 percent),
+#   z0_m constant per id (log-law diagnosis only, not the ground Ks map),
+#   heat_flux_wm2 in W/m2, positive into the air, one value per time.
+# Empty cells are missing. The words nan, na and null are rejected.
+# At least two heights per id and time. Do not drop a row because a check complains.
+# id,time,lat,lon,height_agl_m,height_asl_m,surface_asl_m,pressure_hpa,surface_pressure_hpa,t_c,t_k,theta_k,u_ms,v_ms,wind_speed_ms,wind_dir_deg,w_ms,rh_percent,q_kgkg,dewpoint_c,k_m2s2,epsilon_m2s3,ti,z0_m,heat_flux_wm2
+id,time,lat,lon,height_agl_m,height_asl_m,surface_asl_m,pressure_hpa,surface_pressure_hpa,t_c,t_k,theta_k,u_ms,v_ms,wind_speed_ms,wind_dir_deg,w_ms,rh_percent,q_kgkg,dewpoint_c,k_m2s2,epsilon_m2s3,ti,z0_m,heat_flux_wm2

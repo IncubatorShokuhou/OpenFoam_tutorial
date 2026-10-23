@@ -11,3 +11,7 @@
 5. [并行计算与 ParaView](04_parallel_and_paraview.md)
 6. [真实地形上的大气算例](05_real_terrain.md)
 7. [大气算例和方腔流的图](06_python_visualization.md)
+8. [用 ERA5 填入口](07_era5_inlet.md)
+9. [用 GFS 填入口](08_gfs_inlet.md)
+10. [用 WRF 的 wrfout 填入口](09_wrfout_inlet.md)
+11. [用自己填的观测宽表](10_csv_obs_inlet.md)

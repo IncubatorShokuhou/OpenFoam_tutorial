@@ -1,0 +1,4 @@
+# tools/wrfout_to_boundary.py . wrf-python is not used; destaggering is in the script.
+numpy>=1.24
+netCDF4>=1.6
+rasterio>=1.3

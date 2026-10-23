@@ -71,7 +71,7 @@ class AtmosphericTableTest(unittest.TestCase):
         rows = load_profiles(DEFAULT_PROFILES)
         self.assertNotEqual(rows, _rounded_profiles(build_sample_profiles()))
         self.assertEqual(sorted({row["station"] for row in rows}), ["north_icon", "south_icon"])
-        self.assertEqual(sorted({row["time_s"] for row in rows}), [0.0, 10.0, 20.0])
+        self.assertEqual(sorted({row["time_s"] for row in rows}), [0.0, 180.0, 360.0])
         south = sorted(
             (row for row in rows if row["station"] == "south_icon" and row["time_s"] == 0.0),
             key=lambda row: row["z_m"],

@@ -9,6 +9,7 @@ import argparse
 import csv
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -141,17 +142,25 @@ PROFILE_COMMENT = (
 )
 
 
+def profile_fieldnames(rows):
+    if rows and "x_m" in rows[0]:
+        return ("station", "time_s", "x_m", "y_m", "z_m", "u_ms", "v_ms", "w_ms",
+                "T_K", "q_kgkg", "p_Pa", "k_m2s2", "epsilon_m2s3")
+    return PROFILE_FIELDS
+
+
 def write_profile_csv(path, rows, comment=PROFILE_COMMENT):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    fields = profile_fieldnames(rows)
     with path.open("w", encoding="ascii", newline="") as stream:
         stream.write(comment if comment.endswith("\n") else comment + "\n")
-        writer = csv.DictWriter(stream, fieldnames=PROFILE_FIELDS)
+        writer = csv.DictWriter(stream, fieldnames=fields)
         writer.writeheader()
         for row in rows:
             writer.writerow({
                 key: row[key] if key == "station" else f"{float(row[key]):.8g}"
-                for key in PROFILE_FIELDS
+                for key in fields
             })
 
 
@@ -228,6 +237,8 @@ def load_profiles(path):
         item = {"station": row["station"]}
         for key in PROFILE_FIELDS[1:]:
             item[key] = float(row[key])
+        if row.get("x_m"):
+            item["x_m"] = float(row["x_m"])
         records.append(item)
     if len({row["station"] for row in records}) < 1:
         raise ValueError(f"No stations in {path}")
@@ -306,6 +317,85 @@ def interpolate_profile(records, time_s, y_m, z_m):
     early = blended(times[t0])
     late = blended(times[t1])
     return {key: (1.0 - wt) * early[key] + wt * late[key] for key in early}
+
+
+def _sample_column(rows, z_m):
+    heights = sorted(row["z_m"] for row in rows)
+    by_z = {row["z_m"]: row for row in rows}
+    lower, upper, weight = _bracket(heights, z_m)
+    sample = {}
+    for key in ("u_ms", "v_ms", "w_ms", "T_K", "q_kgkg", "p_Pa", "k_m2s2", "epsilon_m2s3"):
+        sample[key] = (1.0 - weight) * by_z[heights[lower]][key] + weight * by_z[heights[upper]][key]
+    return sample
+
+
+def interpolate_profile_at(records, time_s, x_m, y_m, z_m):
+    """Like ``interpolate_profile``, and bilinear in x when the table has ``x_m``."""
+    if not any("x_m" in row for row in records):
+        return interpolate_profile(records, time_s, y_m, z_m)
+    times = sorted({row["time_s"] for row in records})
+    t0, t1, weight_t = _bracket(times, time_s)
+
+    def at_time(time_value):
+        rows = [row for row in records if row["time_s"] == time_value]
+        xs = sorted({round(row["x_m"], 3) for row in rows})
+        ys = sorted({round(row["y_m"], 3) for row in rows})
+        buckets = {}
+        for row in rows:
+            buckets.setdefault((round(row["x_m"], 3), round(row["y_m"], 3)), []).append(row)
+        i0, i1, weight_x = _bracket(xs, x_m)
+        j0, j1, weight_y = _bracket(ys, y_m)
+        corner_keys = [(xs[i], ys[j]) for i, j in ((i0, j0), (i1, j0), (i0, j1), (i1, j1))]
+        if all(key in buckets for key in corner_keys):
+            corners = [_sample_column(buckets[key], z_m) for key in corner_keys]
+            sample = {}
+            for key in corners[0]:
+                south = (1.0 - weight_x) * corners[0][key] + weight_x * corners[1][key]
+                north = (1.0 - weight_x) * corners[2][key] + weight_x * corners[3][key]
+                sample[key] = (1.0 - weight_y) * south + weight_y * north
+            return sample
+        # Stations are not a filled lon/lat rectangle. UTM easting changes
+        # with latitude, so two sites on one meridian are not one x column.
+        samples = []
+        weights = []
+        for key, column_rows in buckets.items():
+            distance = math.hypot(key[0] - x_m, key[1] - y_m)
+            samples.append(_sample_column(column_rows, z_m))
+            weights.append(1.0 / max(distance, 1.0))
+        total = sum(weights)
+        return {
+            key: sum(weight * column[key] for weight, column in zip(weights, samples)) / total
+            for key in samples[0]
+        }
+
+    early = at_time(times[t0])
+    late = at_time(times[t1])
+    return {key: (1.0 - weight_t) * early[key] + weight_t * late[key] for key in early}
+
+
+def project_wgs84_to_local(lon, lat, epsg, origin_x, origin_y):
+    """Project WGS84 degrees into local metres. ``epsg`` is required on purpose."""
+    if epsg is None:
+        raise ValueError("epsg is required; this function will not guess a projected CRS")
+    import rasterio.warp
+    lon_arr = np.asarray(lon, dtype=float)
+    lat_arr = np.asarray(lat, dtype=float)
+    east, north = rasterio.warp.transform(
+        "EPSG:4326", f"EPSG:{int(epsg)}",
+        np.atleast_1d(lon_arr).ravel().tolist(),
+        np.atleast_1d(lat_arr).ravel().tolist(),
+    )
+    local_x = np.asarray(east, dtype=float) - float(origin_x)
+    local_y = np.asarray(north, dtype=float) - float(origin_y)
+    if lon_arr.ndim == 0:
+        return float(local_x[0]), float(local_y[0])
+    return local_x.reshape(lon_arr.shape), local_y.reshape(lat_arr.shape)
+
+
+def potential_temperature_from_kelvin(temperature_k, pressure_pa, p_ref=1.0e5):
+    """Dry potential temperature. ``temperature_k`` is absolute temperature."""
+    temperature_k = float(temperature_k)
+    return temperature_k * (float(p_ref) / float(pressure_pa)) ** (R_DRY / CP_AIR)
 
 
 def dynamic_pressure(pressure, height, p_ref=P_REF, rho=RHO0, gravity=GRAVITY, limit=PRGH_LIMIT):
@@ -696,6 +786,25 @@ def plane_sample_points(x_const, y_nodes, z_min, z_max, n_y=6, n_z=8):
     return np.asarray(ordered, dtype=float)
 
 
+def y_plane_sample_points(y_const, x_nodes, z_min, z_max, n_x=6, n_z=8):
+    """Sample a y=const face. The first three points are not colinear."""
+    x_values = np.linspace(float(x_nodes[0]), float(x_nodes[-1]), n_x)
+    z_values = np.linspace(z_min, z_max, n_z)
+    ordered = [
+        (x_values[0], y_const, z_values[0]),
+        (x_values[1], y_const, z_values[0]),
+        (x_values[0], y_const, z_values[1]),
+    ]
+    seen = set(ordered)
+    for z_value in z_values:
+        for x_value in x_values:
+            item = (float(x_value), float(y_const), float(z_value))
+            if item not in seen:
+                ordered.append(item)
+                seen.add(item)
+    return np.asarray(ordered, dtype=float)
+
+
 def z0_at(landcover, x_m, y_m):
     xs = np.unique([row["x_m"] for row in landcover])
     ys = np.unique([row["y_m"] for row in landcover])
@@ -769,8 +878,12 @@ def write_initial_fields(case, mesh, profiles, heatflux, ks):
             mesh["ground"][j, i] + mesh["ground"][j, i + 1]
             + mesh["ground"][j + 1, i] + mesh["ground"][j + 1, i + 1]
         )
-    state = [interpolate_profile(profiles, 0.0, centers[n, 1], max(centers[n, 2] - z_ground[n], 0.0))
-             for n in range(cell_count(mesh))]
+    state = [
+        interpolate_profile_at(
+            profiles, 0.0, centers[n, 0], centers[n, 1], max(centers[n, 2] - z_ground[n], 0.0),
+        )
+        for n in range(cell_count(mesh))
+    ]
     velocity = np.array([[row["u_ms"], row["v_ms"], row["w_ms"]] for row in state])
     temperature = np.array([row["T_K"] for row in state])
     humidity = np.array([row["q_kgkg"] for row in state])
@@ -816,8 +929,8 @@ def write_initial_fields(case, mesh, profiles, heatflux, ks):
         "        value           uniform (5 0 0);\n    }",
         "    ground\n    {\n        type            noSlip;\n    }",
         "    top\n    {\n" + slip + "    }",
-        "    front\n    {\n" + slip + "    }",
-        "    back\n    {\n" + slip + "    }",
+        "    front\n    {\n" + inlet_u + "    }",
+        "    back\n    {\n" + inlet_u + "    }",
     ]))
     t_side = inlet_outlet_scalar.format(value=_fmt_scalar(T_REF))
     vol_scalar(zero / "T", "T", "[temperature]", scalar_internal("T", "[temperature]", temperature), "\n".join([
@@ -825,8 +938,8 @@ def write_initial_fields(case, mesh, profiles, heatflux, ks):
         "    outlet\n    {\n" + inlet_outlet_scalar.format(value=_fmt_scalar(float(np.mean(temperature)))) + "    }",
         "    ground\n    {\n" + ground_t + "    }",
         "    top\n    {\n" + t_side + "    }",
-        "    front\n    {\n" + t_side + "    }",
-        "    back\n    {\n" + t_side + "    }",
+        "    front\n    {\n" + inlet_s + "    }",
+        "    back\n    {\n" + inlet_s + "    }",
     ]))
     q_fallback = _fmt_scalar(float(np.mean(humidity)))
     q_side = inlet_outlet_scalar.format(value=q_fallback)
@@ -836,8 +949,8 @@ def write_initial_fields(case, mesh, profiles, heatflux, ks):
         "    outlet\n    {\n" + q_side + "    }",
         "    ground\n    {\n" + zero_grad + "    }",
         "    top\n    {\n" + q_side + "    }",
-        "    front\n    {\n" + q_side + "    }",
-        "    back\n    {\n" + q_side + "    }",
+        "    front\n    {\n" + inlet_s + "    }",
+        "    back\n    {\n" + inlet_s + "    }",
     ]))
     k_side = inlet_outlet_scalar.format(value=_fmt_scalar(float(np.mean(k_values))))
     vol_scalar(zero / "k", "k", "[turbulentKineticEnergy]", scalar_internal("k", "[turbulentKineticEnergy]", k_values), "\n".join([
@@ -845,8 +958,8 @@ def write_initial_fields(case, mesh, profiles, heatflux, ks):
         "    outlet\n    {\n" + k_side + "    }",
         "    ground\n    {\n        type            kqRWallFunction;\n        value           uniform 0.1;\n    }",
         "    top\n    {\n" + k_side + "    }",
-        "    front\n    {\n" + k_side + "    }",
-        "    back\n    {\n" + k_side + "    }",
+        "    front\n    {\n" + inlet_s + "    }",
+        "    back\n    {\n" + inlet_s + "    }",
     ]))
     e_side = inlet_outlet_scalar.format(value=_fmt_scalar(float(np.mean(epsilon))))
     vol_scalar(zero / "epsilon", "epsilon", "[turbulentEpsilon]", scalar_internal("epsilon", "[turbulentEpsilon]", epsilon), "\n".join([
@@ -854,8 +967,8 @@ def write_initial_fields(case, mesh, profiles, heatflux, ks):
         "    outlet\n    {\n" + e_side + "    }",
         "    ground\n    {\n        type            epsilonWallFunction;\n        value           uniform 0.01;\n    }",
         "    top\n    {\n" + e_side + "    }",
-        "    front\n    {\n" + e_side + "    }",
-        "    back\n    {\n" + e_side + "    }",
+        "    front\n    {\n" + inlet_s + "    }",
+        "    back\n    {\n" + inlet_s + "    }",
     ]))
     fixed_flux = f"        type            fixedFluxPressure;\n        value           uniform 0;\n"
     vol_scalar(zero / "p_rgh", "p_rgh", "[pressure]", scalar_internal("p_rgh", "[pressure]", 0.0), "\n".join([
@@ -902,32 +1015,46 @@ def ground_at_y(y_nodes, column, y_m):
     return (1.0 - weight) * float(column[lower]) + weight * float(column[upper])
 
 
+def _agl_on_samples(points, nodes, column, horizontal_index):
+    return np.array([
+        max(point[2] - ground_at_y(nodes, column, point[horizontal_index]), 0.0)
+        for point in points
+    ])
+
+
 def write_boundary_data(case, mesh, profiles):
+    """Write inlet, front, back and outlet clouds for timeVaryingMappedFixedValue."""
     z_top = float(np.max(mesh["ground"]) + mesh["h_air"])
     times = sorted({row["time_s"] for row in profiles})
-    for patch, x_const in (("inlet", float(mesh["x"][0])), ("outlet", float(mesh["x"][-1]))):
-        points = plane_sample_points(x_const, mesh["y"], 1.0, z_top)
-        column = ground_on_plane(mesh, x_const)
-        agl = np.array([
-            max(point[2] - ground_at_y(mesh["y"], column, point[1]), 0.0)
-            for point in points
-        ])
+    front_y = float(mesh["y"][0])
+    back_y = float(mesh["y"][-1])
+    planes = []
+    specs = (
+        ("inlet", "x", float(mesh["x"][0])),
+        ("outlet", "x", float(mesh["x"][-1])),
+        ("front", "y", front_y),
+        ("back", "y", back_y),
+    )
+    for patch, axis, const in specs:
+        if axis == "x":
+            points = plane_sample_points(const, mesh["y"], 1.0, z_top)
+            agl = _agl_on_samples(points, mesh["y"], ground_on_plane(mesh, const), 1)
+        else:
+            points = y_plane_sample_points(const, mesh["x"], 1.0, z_top)
+            row = 0 if abs(const - front_y) <= abs(const - back_y) else mesh["ny"]
+            agl = _agl_on_samples(points, mesh["x"], mesh["ground"][row, :], 0)
+        planes.append((patch, points, agl))
+    for patch, points, agl in planes:
         cloud = Path(case) / "constant" / "boundaryData" / patch
         write_points_cloud(cloud / "points", points)
         for time in times:
             time_name = str(int(time)) if float(time).is_integer() else _fmt_scalar(time)
             state = [
-                interpolate_profile(profiles, time, point[1], height)
+                interpolate_profile_at(profiles, time, point[0], point[1], height)
                 for point, height in zip(points, agl)
             ]
             target = cloud / time_name
-            if patch == "inlet":
-                write_mapped_cloud(target / "U", np.array([[s["u_ms"], s["v_ms"], s["w_ms"]] for s in state]))
-                write_mapped_cloud(target / "T", np.array([s["T_K"] for s in state]))
-                write_mapped_cloud(target / "q", np.array([s["q_kgkg"] for s in state]))
-                write_mapped_cloud(target / "k", np.array([s["k_m2s2"] for s in state]))
-                write_mapped_cloud(target / "epsilon", np.array([s["epsilon_m2s3"] for s in state]))
-            else:
+            if patch == "outlet":
                 raw_p = np.array([s["p_Pa"] for s in state])
                 anomaly, clamped = dynamic_pressure(raw_p, agl)
                 write_mapped_cloud(target / "p_rgh", anomaly)
@@ -936,6 +1063,12 @@ def write_boundary_data(case, mesh, profiles):
                         f"Warning: {patch} p_rgh at t={time_name} was scaled to ±{PRGH_LIMIT} Pa",
                         file=sys.stderr,
                     )
+                continue
+            write_mapped_cloud(target / "U", np.array([[s["u_ms"], s["v_ms"], s["w_ms"]] for s in state]))
+            write_mapped_cloud(target / "T", np.array([s["T_K"] for s in state]))
+            write_mapped_cloud(target / "q", np.array([s["q_kgkg"] for s in state]))
+            write_mapped_cloud(target / "k", np.array([s["k_m2s2"] for s in state]))
+            write_mapped_cloud(target / "epsilon", np.array([s["epsilon_m2s3"] for s in state]))
 
 
 def write_meta(case, dem, mesh):
@@ -999,12 +1132,37 @@ def ensure_tutorial_dem(path=TUTORIAL_DEM):
     return path
 
 
-def prepare_case(case, profiles, landcover, heatflux, dem_path=None, stride=1, nz=12,
-                 h_air=180.0, growth=1.10, write_stl=True, sample_hill=False):
+def rewrite_control_times(case, end_time, delta_t, write_interval):
+    path = Path(case) / "system" / "controlDict"
+    text = path.read_text(encoding="ascii")
+    for key, value in (("endTime", end_time), ("deltaT", delta_t), ("writeInterval", write_interval)):
+        text, count = re.subn(rf"({key}\s+)[0-9.eE+-]+;", rf"\g<1>{value};", text, count=1)
+        if count != 1:
+            raise RuntimeError(f"controlDict is missing {key}")
+    path.write_text(text, encoding="ascii")
+
+
+EXAMPLE_KEEP = {"README.md", "DATA_SOURCE", "Allrun", "Allclean", "inputs"}
+
+
+def reset_case_dir(case):
+    """Remove generated OpenFOAM files and keep an example's inputs and docs."""
     case = Path(case)
-    if case.exists():
-        shutil.rmtree(case)
-    case.mkdir(parents=True)
+    case.mkdir(parents=True, exist_ok=True)
+    for child in list(case.iterdir()):
+        if child.name in EXAMPLE_KEEP:
+            continue
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+    return case
+
+
+def prepare_case(case, profiles, landcover, heatflux, dem_path=None, stride=1, nz=12,
+                 h_air=180.0, growth=1.10, write_stl=True, sample_hill=False,
+                 end_time=None, delta_t=None, write_interval=None):
+    case = reset_case_dir(case)
     dem_file = case / "dem_utm.tif"
     if sample_hill:
         write_sample_dem(dem_file)
@@ -1015,6 +1173,10 @@ def prepare_case(case, profiles, landcover, heatflux, dem_path=None, stride=1, n
     dem = read_dem(dem_file, stride=stride)
     mesh = build_hex_mesh(dem["x"], dem["y"], dem["height"], h_air, nz, growth)
     copy_templates(case)
+    if end_time is not None:
+        if delta_t is None or write_interval is None:
+            raise ValueError("end_time, delta_t and write_interval are set together")
+        rewrite_control_times(case, end_time, delta_t, write_interval)
     write_poly_mesh(mesh, case / "constant" / "polyMesh")
     write_meta(case, dem, mesh)
     ks, _centers = ground_ks(mesh, landcover)
@@ -1049,6 +1211,10 @@ def parse_args(argv):
     parser.add_argument("--h-air", type=float, default=180.0)
     parser.add_argument("--growth", type=float, default=1.10)
     parser.add_argument("--skip-stl", action="store_true")
+    parser.add_argument("--end-time", type=float, default=None,
+                        help="Rewrite controlDict endTime. Set with --delta-t and --write-interval.")
+    parser.add_argument("--delta-t", type=float, default=None)
+    parser.add_argument("--write-interval", type=float, default=None)
     return parser.parse_args(argv)
 
 
@@ -1067,6 +1233,7 @@ def main(argv=None):
         dem_path=dem_path, stride=args.stride, nz=args.nz,
         h_air=args.h_air, growth=args.growth, write_stl=not args.skip_stl,
         sample_hill=args.sample_hill,
+        end_time=args.end_time, delta_t=args.delta_t, write_interval=args.write_interval,
     )
 
 

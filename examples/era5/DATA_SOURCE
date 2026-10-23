@@ -1,0 +1,17 @@
+# 数据说明
+
+这个目录演示 ERA5 气压层怎样进第 5 课的景山网格。求解用的 NetCDF 是合成样本，不是 CDS 下载。
+
+## 气象样本
+
+- 文件：`inputs/era5_pressure_sample.nc`、`inputs/era5_single_sample.nc`
+- 全局属性 `tutorial_sample` 的值是 `synthetic ERA5-shaped NetCDF, not a CDS download`
+- 短名按 ERA5：`u` `v` `w` `t` `q` `z`，地面还有 `sshf`
+- 时间轴写成 2025-01-15 00:00 UTC、01:00 UTC、02:00 UTC，只为对上景山的三个小时
+- 两个格点 39.75°N、116.25°E 和 40.00°N、116.25°E
+- `./Allrun` 把它们编成 `inputs/boundary.csv`。求解器时间是 0 s、60 s、120 s
+- 许可：这是本仓库为了走通解码写的数，不套用 Copernicus 的 ERA5 许可。真正的 ERA5 要自己的 CDS 账号，许可是 Copernicus licence，账号放在 `~/.cdsapirc`
+
+## 地形和粗糙度
+
+和 `examples/jingshan_openmeteo` 相同。DEM 运行时裁剪，不提交。粗糙度是 ESA WorldCover 2021，CC BY 4.0，见 `inputs/landcover_z0.csv`。

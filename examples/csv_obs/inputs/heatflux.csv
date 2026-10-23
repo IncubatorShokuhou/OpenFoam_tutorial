@@ -1,0 +1,6 @@
+# Ground sensible-heat flux into the air, W/m2, taken from heat_flux_wm2.
+# One value per time. Positive heats the fluid.
+time_s,q_Wm2
+0,21.755059
+60,12.410798
+120,2.434908

@@ -1,0 +1,46 @@
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      p;
+}
+
+dimensions      [pressure];
+
+internalField   uniform 101325;
+
+boundaryField
+{
+    inlet
+    {
+        type            calculated;
+        value           uniform 101325;
+    }
+    outlet
+    {
+        type            calculated;
+        value           uniform 101325;
+    }
+    ground
+    {
+        type            calculated;
+        value           uniform 101325;
+    }
+    top
+    {
+        type            calculated;
+        value           uniform 101325;
+    }
+    front
+    {
+        type            calculated;
+        value           uniform 101325;
+    }
+    back
+    {
+        type            calculated;
+        value           uniform 101325;
+    }
+}
+

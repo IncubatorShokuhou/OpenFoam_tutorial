@@ -1,0 +1,4 @@
+# WRF HFX domain mean, W/m2, positive upward into the air.
+time_s,q_Wm2
+0,18
+120,10

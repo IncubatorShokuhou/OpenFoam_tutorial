@@ -1,0 +1,20 @@
+# 数据说明
+
+这个目录用真实的 GFS 柱驱动景山网格。提交的是解码后的小 CSV。全球 GRIB2 不提交。
+
+## 气象
+
+- 文件：`inputs/boundary.csv`、`inputs/heatflux.csv`
+- 来源：NOAA AWS `https://noaa-gfs-bdp-pds.s3.amazonaws.com`
+- 周期：2025-01-15 00Z，预报时次 f000、f001、f002，分辨率 0.25°
+- 请求点 39.923°N、116.389°E。最近的两个格点是 39.75°N、116.50°E 和 40.00°N、116.50°E
+- 投影 EPSG:32650，原点东 447435 m、北 4419195 m
+- 求解器时间 0 s、60 s、120 s
+- 地面热通量来自 `sflux` 文件。索引名 `SHTFL`，eccodes 短名 `ishf`，瞬时 W/m²，向上为正。f000 是 4，f001 是 30，f002 是 53
+- f002 近地面位温略降。取数脚本只打印警告，行仍写进 CSV
+- 原始子集在 `downloads/gfs/`，大约一百多 MB，被 `.gitignore` 排除
+- 许可：NOAA GFS 是美国政府作品，公共领域
+
+## 地形和粗糙度
+
+和 `examples/jingshan_openmeteo` 相同。DEM 运行时裁剪。粗糙度是 ESA WorldCover 2021，CC BY 4.0。
