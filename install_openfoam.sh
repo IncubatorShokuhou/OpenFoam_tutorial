@@ -84,7 +84,9 @@ if [[ ! -f $third_party_dir/Allwmake ]]; then
 fi
 
 # shellcheck disable=SC1090
+set +u
 source "$foam_dir/etc/bashrc"
+set -u
 echo "Building ThirdParty libraries with $JOBS jobs..."
 (cd "$third_party_dir" && ./Allwmake -j "$JOBS") 2>&1 | tee "$ROOT_DIR/logs/thirdparty-build.log"
 echo "Building OpenFOAM with $JOBS jobs..."

@@ -37,7 +37,7 @@ logs/*-build.log         完整编译日志
 source ./env.sh
 echo "$WM_PROJECT_VERSION"       # 应输出 14
 which foamRun                    # 应指向本仓库 local/ 下
-foamVersion                     # 应输出 14
+foamVersion                     # 应显示 OpenFOAM-14
 ./run_cavity.sh                 # 最终应输出 Success
 ```
 

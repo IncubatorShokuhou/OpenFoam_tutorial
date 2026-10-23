@@ -14,7 +14,16 @@ find "$CASE_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 cp -a "$FOAM_TUTORIALS/incompressibleFluid/cavity/." "$CASE_DIR/"
 cd "$CASE_DIR"
 blockMesh | tee log.blockMesh
-foamDictionary system/decomposeParDict -entry numberOfSubdomains -set "$NP"
+cat > system/decomposeParDict <<EOF
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    object      decomposeParDict;
+}
+numberOfSubdomains $NP;
+method scotch;
+EOF
 decomposePar -force | tee log.decomposePar
 mpirun -np "$NP" foamRun -parallel | tee log.foamRun.parallel
 reconstructPar | tee log.reconstructPar
