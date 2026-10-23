@@ -9,5 +9,5 @@
 3. [运行第一个 cavity 算例](02_first_cavity_case.md)
 4. [看懂算例的三个目录](03_case_anatomy.md)
 5. [并行计算与 ParaView](04_parallel_and_paraview.md)
-6. [真实地形：DEM 到 STL](05_real_terrain.md)
-7. [Python 可视化：真实 VTK 到速度/压力图](06_python_visualization.md)
+6. [真实地形上的大气算例](05_real_terrain.md)
+7. [大气算例和方腔流的图](06_python_visualization.md)

@@ -1,0 +1,22 @@
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      atmosphericBoundaryLayerProperties;
+}
+
+// Single-point neutral log law. The running inlet does not use this file.
+// Swap the inlet of U/k/epsilon to atmosphericBoundaryLayer* and add
+// libs ("libatmosphericModels.so"); when the only observation is one
+// speed, one direction and one height. z0 can be a Function2 of (x, y).
+// There is no atmosphericBoundaryLayer inlet for omega in v14.
+
+flowDir         (1 0 0);
+zDir            (0 0 1);
+Uref            5.0;
+Zref            10.0;
+z0              constant 0.03;
+zGround         constant 0.0;
+kappa           0.41;
+Cmu             0.09;

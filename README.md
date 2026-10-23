@@ -38,13 +38,23 @@ OpenFoam_tutorial/
 ├── run_cavity_parallel.sh          # MPI 并行方腔流：分区→求解→重构
 ├── plot_cavity.sh                  # 导出 VTK 并生成速度/压力结果图
 ├── download_dem.sh                 # 按经纬度下载 Copernicus GLO-30 DEM
+├── prepare_atmospheric.sh          # 景山 DEM + 气象表 → 大气算例
+├── run_atmospheric.sh              # checkMesh 后用 fluid 求解
+├── plot_atmospheric.sh             # 导出 VTK 并画地形风场图
 ├── requirements-post.txt           # 方腔流绘图依赖
 ├── requirements-terrain.txt        # DEM 转 STL 依赖
+├── requirements-era5.txt           # 可选：下载 ERA5 边界表
+├── cases/atmospheric/              # 大气算例的字典模板
 ├── tools/
 │   ├── plot_cavity.py              # 读取真实 VTK，画速度/压力图
+│   ├── plot_atmospheric.py         # 地形、网格、风、位温、比湿
+│   ├── atmospheric_case.py         # 由 DEM 和气象表写算例
+│   ├── fetch_era5_boundary.py      # 可选：CDS 下载 ERA5 垂直柱
+│   ├── fetch_openmeteo_boundary.py # 无 key：ICON 气压层、ERA5 地面、ZBAA
 │   └── dem_to_stl.py               # 投影 GeoTIFF → ASCII STL
 ├── tests/
-│   └── test_dem_to_stl.py          # 用 2×2 小 DEM 检查 STL 转换
+│   ├── test_dem_to_stl.py          # 用 2×2 小 DEM 检查 STL 转换
+│   └── test_atmospheric_case.py    # 气象表、网格和景山算例准备
 └── tutorial/
     ├── README.md                    # 课程导航
     ├── 00_openfoam_basics.md        # 物理、网格、场、求解器
@@ -52,8 +62,8 @@ OpenFoam_tutorial/
     ├── 02_first_cavity_case.md      # 第一个方腔流实验
     ├── 03_case_anatomy.md           # 逐文件读 0/constant/system
     ├── 04_parallel_and_paraview.md  # MPI 分区和 ParaView
-    ├── 05_real_terrain.md           # DEM→投影→STL→snappyHexMesh
-    ├── 06_python_visualization.md   # VTK→NumPy→Matplotlib
+    ├── 05_real_terrain.md           # 气象输入上限、DEM、大气算例
+    ├── 06_python_visualization.md   # 大气算例和方腔流的图
     └── images/                      # 教程图和真实运行结果
 ```
 
@@ -70,7 +80,8 @@ OpenFoam_tutorial/
 └── work/
     ├── cavity/                     # 串行算例和各时刻结果
     ├── cavity_parallel/            # 并行算例、processor* 子域
-    └── terrain/                    # DEM、投影栅格和 STL
+    ├── terrain/                    # DEM、投影栅格和 STL
+    └── atmospheric/                # 地形大气算例和各时刻结果
 ```
 
 ## 第一次上机：只做这五步
@@ -115,7 +126,10 @@ Success: .../work/cavity
 - 400 单元方腔流串行运行；
 - 4 个 MPI rank 分区、并行求解和结果重构；
 - ASCII VTK 导出及 Matplotlib 真实结果图；
-- 投影 GeoTIFF 到 STL 的自动测试。
+- 投影 GeoTIFF 到 STL 的自动测试；
+- 景山 Copernicus GLO-30 裁剪，水平 720 m × 480 m，空气柱 180 m，24 × 16 × 12 共 4608 个六面体；
+- `checkMesh` 为 `Mesh OK`，`foamRun -solver fluid` 积到 t = 20 的 `ExecutionTime` 为 0.60 s；
+- 气象强迫取 2025-01-15 00:00–02:00 UTC 的 ICON 气压层、ERA5 地面量诊断的热通量和 ZBAA 地面风。
 
 官方来源：[OpenFOAM v14](https://github.com/OpenFOAM/OpenFOAM-14)、
 [ThirdParty v14](https://github.com/OpenFOAM/ThirdParty-14)、

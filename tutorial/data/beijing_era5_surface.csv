@@ -1,0 +1,10 @@
+# Open-Meteo archive API, model era5, surface fields only.
+# URL: https://archive-api.open-meteo.com/v1/archive?latitude=39.923&longitude=116.389&start_date=2025-01-15&end_date=2025-01-15&hourly=temperature_2m%2Cwind_speed_10m%2Csoil_temperature_0_to_7cm%2Cshortwave_radiation%2Csurface_pressure&models=era5&wind_speed_unit=ms&timezone=GMT
+# Returned grid cell latitude 40.0 longitude 116.5, elevation 57.0 m. Fetched 2026-10-23.
+# q_Wm2 = rho*cp*CH*max(U10,0.5)*(Tsoil-T2m) with rho=1.2, cp=1004.5, CH=0.002.
+# This is not ERA5 surface_sensible_heat_flux. The CDS script downloads that flux.
+# shortwave_radiation is stored so the morning sun is visible; it is not the wall flux.
+utc,t2_c,soil_0_7cm_c,wind10_ms,shortwave_Wm2,surface_pressure_hpa,q_Wm2
+2025-01-15T00:00Z,-7.1,-2.3,1.88,6,1028.7,21.7551
+2025-01-15T01:00Z,-6.7,-4.1,1.98,109,1028.5,12.4108
+2025-01-15T02:00Z,-0.7,-0.2,2.02,264,1028.3,2.43491
