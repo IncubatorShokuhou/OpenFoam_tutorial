@@ -67,7 +67,7 @@ WEATHER_DATE = "2025-01-15"
 REQUEST_LATS = (39.90, 39.96)
 REQUEST_LONS = (116.39, 116.39)
 HOURS = ("2025-01-15T00:00", "2025-01-15T01:00", "2025-01-15T02:00")
-CLOCK = (0.0, 10.0, 20.0)
+CLOCK = (0.0, 180.0, 360.0)
 PRESSURE_LEVELS = (1000, 975, 950)
 KNOT_TO_MS = 0.514444
 Z0_BY_CLASS = {
@@ -555,8 +555,8 @@ def main(argv=None):
         f"elev {south['elevation']} m, local y {y_by_station['south_icon']:.3f} m.\n"
         f"# North cell {float(north['latitude']):.5f}N {float(north['longitude']):.5f}E "
         f"elev {north['elevation']} m, local y {y_by_station['north_icon']:.3f} m.\n"
-        "# time_s 0, 10, 20 map to 2025-01-15 00:00Z, 01:00Z, 02:00Z. One hour of weather\n"
-        "# is 10 s of CFD. The run does not integrate those two hours.\n"
+        "# time_s 0, 180, 360 map to 2025-01-15 00:00Z, 01:00Z, 02:00Z. One hour of weather\n"
+        "# is 180 s of CFD, so a 3 m/s wind can cross the 720 m domain.\n"
         "# T_K is dry potential temperature at 100000 Pa. z_m is metres above the ICON\n"
         "# orography, and the case looks the profile up the same way above the DEM.\n"
         "# 10 m wind at 00:00Z and 01:00Z is ZBAA (IEM ASOS), converted with 0.514444 m/s per knot.\n"

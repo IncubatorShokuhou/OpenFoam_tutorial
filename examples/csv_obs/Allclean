@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+CASE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+usage() {
+    cat <<'EOF'
+Usage: ./Allclean
+
+Remove solver time directories, VTK, logs and the copied DEM from this
+example. 0/, constant/ (including boundaryData and polyMesh) and inputs/
+stay, so foamRun can be repeated. ./Allrun rebuilds the case from inputs/.
+
+  --help             show this help
+EOF
+}
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    usage
+    exit 0
+fi
+if (($#)); then
+    echo "Unknown argument: $1" >&2
+    usage >&2
+    exit 2
+fi
+
+shopt -s nullglob
+for time_dir in "$CASE"/[1-9]*; do
+    if [[ -d $time_dir ]]; then
+        rm -rf "$time_dir"
+    fi
+done
+shopt -u nullglob
+rm -rf "$CASE/VTK" "$CASE/postProcessing" "$CASE/constant/triSurface" \
+    "$CASE/processor"* "$CASE/dem_utm.tif" "$CASE"/log.*
+printf 'Cleaned results in %s\n' "$CASE"

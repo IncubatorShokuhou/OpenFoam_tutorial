@@ -5,5 +5,5 @@
 # time_s uses the same 00:00Z / 01:00Z / 02:00Z compression as beijing_boundary.csv.
 time_s,q_Wm2
 0,21.755059
-10,12.410798
-20,2.434908
+180,12.410798
+360,2.434908

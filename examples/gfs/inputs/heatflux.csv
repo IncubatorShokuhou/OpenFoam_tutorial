@@ -1,0 +1,6 @@
+# GFS SHTFL surface sensible heat flux, W/m2, positive upward.
+# Taken from gfs.tCCz.sfluxgrbfFFF.grib2 on noaa-gfs-bdp-pds.
+time_s,q_Wm2
+0,4
+60,30
+120,53

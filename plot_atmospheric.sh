@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 CASE_DIR=${CASE_DIR:-"$ROOT_DIR/work/atmospheric"}
 OUTPUT_DIR=${OUTPUT_DIR:-"$ROOT_DIR/tutorial/images"}
+PREFIX=${PREFIX:-atm}
+PROFILES=${PROFILES:-"$ROOT_DIR/tutorial/data/beijing_boundary.csv"}
 
 usage() {
     cat <<'EOF'
@@ -12,6 +14,10 @@ Usage: ./plot_atmospheric.sh
 Export the latest atmospheric time with foamToVTK -ascii and write the
 lesson figures (terrain, mesh, wind, temperature, humidity, profiles).
 
+  CASE_DIR           case to read (default: work/atmospheric)
+  OUTPUT_DIR         figure directory (default: tutorial/images)
+  PREFIX             file prefix (default: atm)
+  PROFILES           boundary CSV drawn on the profile figure
   --help             show this help
 EOF
 }
@@ -43,6 +49,7 @@ vtk_file=$(find "$CASE_DIR/VTK" -maxdepth 1 -type f -name '*.vtk' -printf '%T@ %
 python3 "$ROOT_DIR/tools/plot_atmospheric.py" \
     --case "$CASE_DIR" \
     --vtk "$vtk_file" \
-    --profiles "$ROOT_DIR/tutorial/data/beijing_boundary.csv" \
+    --profiles "$PROFILES" \
+    --prefix "$PREFIX" \
     --output-dir "$OUTPUT_DIR"
 echo "Figures are in $OUTPUT_DIR"

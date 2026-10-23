@@ -4,6 +4,13 @@ build/
 work/
 logs/
 output/
+examples/*/dem_utm.tif
+examples/*/constant/triSurface/
+examples/*/VTK/
+examples/*/postProcessing/
+examples/*/log.*
+examples/*/[1-9]*/
+examples/*/processor*/
 __pycache__/
 *.pyc
 *.log

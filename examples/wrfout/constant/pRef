@@ -1,0 +1,10 @@
+FoamFile
+{
+    format      ascii;
+    class       uniformDimensionedScalarField;
+    location    "constant";
+    object      pRef;
+}
+
+dimensions      [pressure];
+value           101325;

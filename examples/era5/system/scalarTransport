@@ -1,0 +1,14 @@
+// Specific humidity. Passive: it does not change density.
+// Keyword q here is the field name, not the ground heat flux.
+
+#includeEtc "caseDicts/functions/solvers/scalarTransport.cfg"
+
+field           q;
+schemesField    q;
+solverField     q;
+
+diffusivity     viscosity;
+alphal          1;
+alphat          1.18;
+
+writeControl    writeTime;

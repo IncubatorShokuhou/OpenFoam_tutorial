@@ -1,0 +1,19 @@
+# 数据说明
+
+这个目录演示自己填的观测宽表。填好的例子来自第 5 课已经提交的景山表，不是测站原始报文。
+
+## 观测表示例
+
+- 文件：`inputs/jingshan_obs_example.csv`
+- 文件头写着 EXAMPLE。数值从 `tutorial/data/beijing_boundary.csv` 和 `beijing_heatflux.csv` 改写
+- 高空仍是 2025-01-15 00:00–02:00 UTC 的 ICON（Open-Meteo），10 m 风在 00Z 和 01Z 用 ZBAA
+- `t_c` 是由那张边界表里的位温和气压反算的绝对摄氏温度
+- 南站 `south`：39.875°N、116.375°E。北站 `north`：40.000°N、116.375°E
+- 高度从 2 m 起。0 m 那一行没有抄过来，对数律在 z = 0 没有定义
+- `./Allrun` 把这三个 UTC 小时映射到求解器时间 0 s、然后 60 s、然后 120 s。第 5 课用 180 s 表示一个小时
+- 空白模板：`inputs/obs_template.csv`
+- 许可和景山原表相同：Open-Meteo 以 https://open-meteo.com/en/license 为准，ICON 来自 DWD，ZBAA 来自 NOAA/IEM
+
+## 地形和粗糙度
+
+和 `examples/jingshan_openmeteo` 相同。DEM 运行时裁剪。`inputs/landcover_z0.csv` 是 ESA WorldCover 2021，CC BY 4.0。表里的 `z0_m` 只用来诊断 `k` 和 `epsilon`，不替换这份地面粗糙度。

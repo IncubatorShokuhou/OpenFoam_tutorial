@@ -1,0 +1,29 @@
+# 数据说明
+
+这个目录是第 5 课的景山算例。气象表是真实下载后整理的小文件。DEM 栅格太大，不提交。
+
+## 气象
+
+- 文件：`inputs/boundary.csv`、`inputs/heatflux.csv`
+- 高空：Open-Meteo Historical Forecast API，模式 `icon_global`
+- 时间：2025-01-15 00:00 UTC、01:00 UTC、02:00 UTC。2026-10-23 取回
+- 南格点 39.875°N、116.375°E，北格点 40.000°N、116.375°E
+- 求解器时间 0 s 对 00:00 UTC，180 s 对 01:00 UTC，360 s 对 02:00 UTC
+- 00:00 UTC 和 01:00 UTC 的 10 m 风换成 NOAA/IEM 的 ZBAA。02:00 UTC 的 ZBAA 没有风向，这一档留着 ICON
+- 热通量由 Open-Meteo archive、`models=era5` 的地面量诊断，格点 40.0°N、116.5°E。这不是 ERA5 的 `sshf`
+- 垂直速度接口没有提供，表里 `w_ms` 为 0
+- 许可：Open-Meteo 以 https://open-meteo.com/en/license 为准。ICON 来自 DWD 开放数据。IEM/ZBAA 是公开地面报
+
+## 地形
+
+- Copernicus GLO-30 公开 COG
+- `./Allrun` 裁 EPSG:32650 窗口 `447420 4419180 448170 4419690`，像元 30 m
+- 原点东坐标 447435 m、北坐标 4419195 m
+- 大约 39.921°N–39.926°N、116.385°E–116.394°E
+- 许可：Copernicus DEM Licence。栅格留在 `work/terrain/`，不进这个目录
+
+## 粗糙度
+
+- `inputs/landcover_z0.csv`
+- ESA WorldCover 2021 v200，CC BY 4.0
+- 建成区粗糙度封顶 0.20 m，使 `Ks = 20 z0` 低于第一层网格

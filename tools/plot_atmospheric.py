@@ -105,7 +105,7 @@ def height_agl(centers, dem):
     return agl
 
 
-def plot_fields(vtk_path, output_dir, profiles_path, dem):
+def plot_fields(vtk_path, output_dir, profiles_path, dem, prefix="atm"):
     _points, _cells, centers, fields = read_legacy_vtk(Path(vtk_path))
     if "U" not in fields or "T" not in fields or "q" not in fields:
         raise SystemExit("VTK is missing U, T or q")
@@ -131,24 +131,24 @@ def plot_fields(vtk_path, output_dir, profiles_path, dem):
     )
     figure.colorbar(image, ax=axis, label="|U| (m/s)")
     axis.set_title(f"风速与 x-z 矢量，y ≈ {y_target:.0f} m")
-    figure.savefig(output_dir / "atm_wind.png", dpi=160)
+    figure.savefig(output_dir / f"{prefix}_wind.png", dpi=160)
     plt.close(figure)
 
     figure, axis = plt.subplots(figsize=(7.6, 4.2), constrained_layout=True)
     image, _label = filled_slice(axis, centers, fields["T"][:, 0], mask, "位温", "coolwarm")
     figure.colorbar(image, ax=axis, label="T (K)，本算例为位温")
     axis.set_title(f"位温，y ≈ {y_target:.0f} m")
-    figure.savefig(output_dir / "atm_temperature.png", dpi=160)
+    figure.savefig(output_dir / f"{prefix}_temperature.png", dpi=160)
     plt.close(figure)
 
     figure, axis = plt.subplots(figsize=(7.6, 4.2), constrained_layout=True)
     image, _label = filled_slice(axis, centers, fields["q"][:, 0] * 1000.0, mask, "比湿", "Blues")
     figure.colorbar(image, ax=axis, label="比湿 q (g/kg)")
     axis.set_title(f"比湿，y ≈ {y_target:.0f} m")
-    figure.savefig(output_dir / "atm_humidity.png", dpi=160)
+    figure.savefig(output_dir / f"{prefix}_humidity.png", dpi=160)
     plt.close(figure)
 
-    plot_profiles(centers, fields, dem, y_target, profiles_path, output_dir / "atm_profiles.png")
+    plot_profiles(centers, fields, dem, y_target, profiles_path, output_dir / f"{prefix}_profiles.png")
     return {
         "cells": len(centers),
         "speed_min": float(speed.min()),
@@ -227,18 +227,19 @@ def main(argv=None):
     parser.add_argument("--vtk", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--profiles", type=Path, default=None)
+    parser.add_argument("--prefix", default="atm")
     args = parser.parse_args(argv)
     configure_font()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     dem = read_dem(args.case / "dem_utm.tif")
     meta = read_meta(args.case / "constant" / "terrainCase")
     points = read_points(args.case / "constant" / "polyMesh" / "points")
-    plot_terrain(dem, args.output_dir / "atm_terrain.png")
-    plot_mesh(points, meta, args.output_dir / "atm_mesh.png")
+    plot_terrain(dem, args.output_dir / f"{args.prefix}_terrain.png")
+    plot_mesh(points, meta, args.output_dir / f"{args.prefix}_mesh.png")
     profiles = args.profiles
     if profiles is None:
         profiles = Path(__file__).resolve().parents[1] / "tutorial" / "data" / "beijing_boundary.csv"
-    stats = plot_fields(args.vtk, args.output_dir, profiles, dem)
+    stats = plot_fields(args.vtk, args.output_dir, profiles, dem, args.prefix)
     print(
         "cells={cells}, speed=[{speed_min:.4g}, {speed_max:.4g}] m/s, "
         "T=[{T_min:.4g}, {T_max:.4g}] K, q=[{q_min:.4g}, {q_max:.4g}] kg/kg".format(**stats)

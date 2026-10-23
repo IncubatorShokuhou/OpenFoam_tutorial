@@ -1,0 +1,6 @@
+# ERA5 sshf is accumulated J/m2 and positive downward.
+# q_Wm2 is the deaccumulation, negated, so positive heats the air.
+time_s,q_Wm2
+0,20
+60,15
+120,8

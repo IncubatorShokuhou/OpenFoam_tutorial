@@ -1,6 +1,6 @@
 # 第 5 课：把地形和气象表送进 OpenFOAM
 
-这一课的算例是北京景山。范围在 `download_dem.sh` 的示例框里，北纬 39.85° 到 39.95°、东经 116.30° 到 116.45°，从中取大约 720 m × 480 m 的 Copernicus GLO-30。地面高程大约 44 m 到 85 m。入口给 2025-01-15 凌晨三个时刻的多层风和位温，比湿和湍流写在同一张表里。地面给 WorldCover 转成的粗糙度，热通量由 ERA5 地面量估算。求解用 OpenFOAM v14 的 `fluid` 模块，算 20 s。
+这一课的算例是北京景山。范围在 `download_dem.sh` 的示例框里，北纬 39.85° 到 39.95°、东经 116.30° 到 116.45°，从中取大约 720 m × 480 m 的 Copernicus GLO-30。地面高程大约 44 m 到 85 m。入口给 2025-01-15 凌晨三个时刻的多层风和位温，比湿和湍流写在同一张表里。地面给 WorldCover 转成的粗糙度，热通量由 ERA5 地面量估算。求解用 OpenFOAM v14 的 `fluid` 模块，积到 360 s。入口、前侧面和后侧面映射同一张气象表。第 7 课到第 9 课换数据源，网格仍是这一份景山。
 
 网格、边界和初始场由 `./prepare_atmospheric.sh` 写到 `work/atmospheric/`。那个目录在 `.gitignore` 里。DEM、STL 和各时刻结果都不进 Git。仓库里留下这次取回的气象表、粗糙度表和脚本，以及这一课的结果图。
 
@@ -8,12 +8,12 @@
 flowchart TD
   dem["投影 DEM GeoTIFF"] --> mesh["地形跟随六面体网格"]
   dem --> stl["terrain.stl 供表面检查"]
-  met["气象表 CSV"] --> inlet["constant/boundaryData/inlet"]
+  met["气象表 CSV"] --> sides["inlet front back 的 U T q k epsilon"]
   met --> outlet["出口 p_rgh"]
   cover["粗糙度表"] --> ks["地面 nut 的 Ks"]
   flux["地面热通量"] --> wall["externalTemperature"]
   mesh --> run["foamRun -solver fluid"]
-  inlet --> run
+  sides --> run
   outlet --> run
   ks --> run
   wall --> run
@@ -117,7 +117,7 @@ mindmap
 
 ## 5.3 本课实际接进去的量
 
-表在 `tutorial/data/`。文件头写了来源、日期和位置。求解器时间的 0 s、10 s 和 20 s 对应 2025-01-15 00:00 UTC、01:00 UTC 和 02:00 UTC。一个小时的天气被压进 10 s，这 20 s 的积分并没有把那两个小时算完，只是让边界在三档实测廓线之间线性插值。
+表在 `tutorial/data/`。文件头写了来源、日期和位置。求解器时间 0 s 对应 2025-01-15 00:00 UTC，180 s 对应 01:00 UTC，360 s 对应 02:00 UTC。一个小时的天气写成 180 s。3 m/s 的风在这 360 s 里大约走出 1080 m，能穿过 720 m 的域。边界在这三档廓线之间线性插值。
 
 2026-10-23 核对过 Open-Meteo 的存档接口。`archive-api.open-meteo.com` 在 `models=era5` 下接受气压层变量名，返回值是空的。多层风、温度和湿度，以及位势高度，改从 Historical Forecast API 的 `icon_global` 读取，不需要 key。ERA5 在同一个存档里能给地面的 2 m 气温、10 m 风和 0–7 cm 土壤温度，热通量只用这三项。首都机场 ZBAA 的地面风来自 NOAA/IEM。
 
@@ -135,17 +135,17 @@ mindmap
 | 粗糙度 | `beijing_landcover_z0.csv`，ESA WorldCover 2021 贴到 30 m 格点。林地 0.15 m，建成区 0.20 m，水体 0.001 m | 地面 `nutkRoughWallFunction` 的 `Ks = 20 z0`。建成区若按 1 m 的城市粗糙度，`Ks` 会超过第一层网格 |
 | 地形 | Copernicus GLO-30，景山窗口，EPSG:32650 | `prepare_atmospheric.sh` 用 `gdalwarp` 裁到 `work/terrain/`，再读回来生成网格 |
 
-南格点和北格点在 950 hPa 的风速差一截，入口沿 `y` 有水平变化。两个格点都在 720 m 的域外面，域内的值是它们之间的线性插值。原始 ICON 行在 `beijing_icon_levels.csv`。ERA5 地面行在 `beijing_era5_surface.csv`。ZBAA 报文在 `beijing_iem_zbaa.csv`。重新下载用 `python3 tools/fetch_openmeteo_boundary.py`。
+南格点和北格点在 950 hPa 的风速差一截，入口沿 `y` 有水平变化。两个格点的局部 y 分别是 -5125 m 和 8749 m，都在 480 m 宽的域外面。域内的值是它们之间的线性插值。表里没有 `x_m` 时，插值只沿 y 和离地高度。入口在 `x = 0`。前侧面和后侧面用同一张表，采样点落在各自的 y 平面上。出口只映射 `p_rgh`。顶面保持 `slip`。原始 ICON 行在 `beijing_icon_levels.csv`。ERA5 地面行在 `beijing_era5_surface.csv`。ZBAA 报文在 `beijing_iem_zbaa.csv`。重新下载用 `python3 tools/fetch_openmeteo_boundary.py`。
 
-要 ERA5 气压层的垂直速度和感热通量，用 `tools/fetch_era5_boundary.py`。额外依赖写在 `requirements-era5.txt`，包括 `cdsapi` 和 `netCDF4`，还有 `pyproj`。账号放在 `~/.cdsapirc`，不要写进命令行。必须自己给 `--epsg` 和 `--z0`，脚本不猜投影。垂直速度从 Pa/s 换成 m/s。`sshf` 是向下为正的累积焦耳每平方米，脚本把它变成进入空气的 W/m²，另外写成热通量表。`k` 和 `epsilon` 仍是诊断值。
+第 7 课讲 ERA5，第 8 课讲 GFS，第 9 课讲 WRF 的 `wrfout`，第 10 课讲自己填的观测宽表。每课有自己的取数脚本，现成算例在 `examples/`。CDS 账号只放 `~/.cdsapirc`。投影必须自己给 `--epsg`，脚本不猜。垂直速度从 Pa/s 换成 m/s。`k` 和 `epsilon` 仍是诊断值。
 
 ```mermaid
 flowchart LR
   icon["ICON 气压层"] --> col["垂直柱: u v T q p"]
   iem["ZBAA 10 m 风"] --> col
   col --> diag["诊断 k 与 epsilon，w 记 0"]
-  diag --> interp["按入口平面的 y 和离地高度插值"]
-  interp --> cloud["boundaryData/inlet/时间/U T q k epsilon"]
+  diag --> interp["按面上的 x y 和离地高度插值"]
+  interp --> cloud["boundaryData 的 inlet front back"]
   col --> hydro["减去 rho0 g z 和柱平均"]
   hydro --> prgh["boundaryData/outlet/时间/p_rgh"]
   era5["ERA5 土壤温度与 2 m 气温"] --> flux["热通量时间表"]
@@ -200,7 +200,7 @@ flowchart TD
   root --> zero["0/ U T q k epsilon p p_rgh nut alphat"]
   root --> constant["constant/"]
   constant --> poly["polyMesh"]
-  constant --> bd["boundaryData/inlet 与 outlet"]
+  constant --> bd["boundaryData/inlet front back outlet"]
   constant --> tri["triSurface/terrain.stl"]
   constant --> dicts["physicalProperties g momentumTransport pRef"]
   root --> system["system/ controlDict fvSchemes fvSolution functions"]
@@ -210,7 +210,7 @@ flowchart TD
 ```text
 work/atmospheric/
 ├── 0/
-│   ├── U              # 入口 timeVaryingMappedFixedValue，地面 noSlip
+│   ├── U              # inlet front back 为 timeVaryingMappedFixedValue，地面 noSlip
 │   ├── T              # 位温；地面 externalTemperature
 │   ├── q              # 比湿
 │   ├── k
@@ -224,6 +224,8 @@ work/atmospheric/
 │   ├── boundaryData/
 │   │   ├── inlet/points
 │   │   ├── inlet/0/U
+│   │   ├── front/0/U
+│   │   ├── back/0/T
 │   │   └── outlet/0/p_rgh
 │   ├── triSurface/terrain.stl
 │   ├── physicalProperties
@@ -233,7 +235,7 @@ work/atmospheric/
 │   ├── atmosphericBoundaryLayerProperties   # 单点对数律备用，本课入口不用它
 │   └── terrainCase            # 网格尺寸和 DEM 原点，求解器不读
 ├── system/
-│   ├── controlDict            # solver fluid; endTime 20; deltaT 1
+│   ├── controlDict            # solver fluid; endTime 360; deltaT 2; writeInterval 120
 │   ├── fvSchemes
 │   ├── fvSolution
 │   ├── functions              # scalarTransport
@@ -274,11 +276,13 @@ source ./env.sh
 
 `run_atmospheric.sh` 发现没有网格会先调用准备脚本。求解前会删掉大于 0 的时间目录。成功时日志里有 `Mesh OK`，求解以单独一行的 `End` 结束。
 
-默认离散：水平 24 × 16 个格子，30 m；垂直 12 层，空气柱 180 m，近地第一层大约 8.4 m，增长率 1.10。一共 4608 个六面体。`endTime 20`，`deltaT 1`，写出 `10/` 和 `20/`。建成区 `Ks = 4 m`，水体 `Ks = 0.02 m`，都小于第一层高度。
+同一份算例也放在 `examples/jingshan_openmeteo`。那里的 `0/`、`constant/boundaryData` 和网格已经生成好。`./Allrun` 按 `inputs/` 重新写这些文件再求解。DEM 不进 Git，脚本去裁公开的 Copernicus COG。这台机器上那次 `ExecutionTime` 是 4.01 s。
 
-这台机器上 `checkMesh` 的结论是 `Mesh OK`。最大非正交角 25.1°，平均 5.6°，最大偏斜度 0.60。包围盒从 (0 0 44) 到 (720 480 265)，单位 m。`foamRun` 积到 t = 20 时日志里的 `ExecutionTime` 是 0.60 s。t = 1 有一次 `bounding k`，最小值 -0.21，最大值 13.7。`20/k` 落在 0.054 到 7.1 m²/s²。
+默认离散：水平 24 × 16 个格子，30 m。垂直 12 层，空气柱 180 m，近地第一层大约 8.4 m，增长率 1.10。一共 4608 个六面体。`endTime 360`，`deltaT 2`，`writeInterval 120`，写出 `120/` `240/` `360/`。建成区 `Ks = 4 m`，水体 `Ks = 0.02 m`，都小于第一层高度。
 
-位温从地面到 180 m 大约升高 3 K。20 s 里大约 22 W/m² 的热通量在第一层里造成的升温大约 0.06 K，小于层结本身的层与层间隔。比湿只被风带走，不产生浮力。10 m 风速大约 3 m/s，20 s 里气块大约走 60 m，到不了 480 m 处的主峰。图上的风主要是初始廓线，加上这段时间里压力场对山体的调整。
+这台机器上 `checkMesh` 的结论是 `Mesh OK`。最大非正交角 25.1°，平均 5.6°，最大偏斜度 0.60。包围盒从 (0 0 44) 到 (720 480 265)，单位 m。`foamRun` 积到 t = 360 时日志里的 `ExecutionTime` 是 4.05 s。`bounding k` 从 t = 2 就出现。t = 76 时裁剪上限到 1.26×10⁴ m²/s²。t = 360 时日志仍在裁，上限 6.85 m²/s²。VTK 里的 `k` 是 8.2×10⁻⁵ 到 6.85 m²/s²。
+
+位温从地面到 180 m 大约升高 3 K。热通量从 21.8 W/m² 降到 2.4 W/m²。第一层大约 8.4 m，按 22 W/m² 维持 360 s，升温大约 0.8 K。表里的热通量还在下降，整段平均低于 22 W/m²，升温不到 0.8 K。t = 360 的位温全场 249.6 K 到 277.6 K。5% 到 95% 分位是 264.1 K 到 268.7 K，平均 266.3 K。那两头比 0.8 K 大得多，和 `bounding k` 在同一段积分里。风速全场 0.33 m/s 到 6.84 m/s，平均 3.65 m/s。10 m 风速大约 3 m/s 时，360 s 的平流距离大约 1080 m，大于 720 m 的域长。02Z 近地面大约 1.8 m/s，360 s 大约走出 660 m。主峰在 `x ≈ 480 m`，这段近地面空气能越过山。比湿只被风带走，不产生浮力。
 
 结果图在第 6 课逐张解释。这里先放地形、网格和三个物理量，确认数据真的进了求解器。
 

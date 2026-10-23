@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+CASE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd "$CASE/../.." && pwd)
+
+usage() {
+    cat <<'EOF'
+Usage: ./Allrun
+
+Jingshan case driven by the committed Open-Meteo / ZBAA tables.
+Rebuild 0/, constant/ and system/ from inputs/, then run checkMesh and
+foamRun -solver fluid. The Copernicus DEM is not in this folder. The script
+uses inputs/dem_utm.tif when that file exists. Otherwise
+tools/atmospheric_case.py clips the public Copernicus COG to the Jingshan
+window in work/terrain/beijing_jingshan_utm.tif.
+
+  --help             show this help
+EOF
+}
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    usage
+    exit 0
+fi
+if (($#)); then
+    echo "Unknown argument: $1" >&2
+    usage >&2
+    exit 2
+fi
+
+
+dem_args=()
+if [[ -f $CASE/inputs/dem_utm.tif ]]; then
+    dem_args=(--dem "$CASE/inputs/dem_utm.tif")
+fi
+
+python3 "$ROOT/tools/atmospheric_case.py" \
+    --case "$CASE" \
+    --profiles "$CASE/inputs/boundary.csv" \
+    --heatflux "$CASE/inputs/heatflux.csv" \
+    --landcover "$CASE/inputs/landcover_z0.csv" \
+    "${dem_args[@]}" \
+    --skip-stl \
+    --end-time 360 --delta-t 2 --write-interval 120
+
+# shellcheck disable=SC1091
+source "$ROOT/env.sh"
+cd "$CASE"
+shopt -s nullglob
+for time_dir in "$CASE"/[1-9]*; do
+    if [[ -d $time_dir ]]; then
+        rm -rf "$time_dir"
+    fi
+done
+shopt -u nullglob
+rm -rf VTK postProcessing
+echo "[1/2] Checking mesh"
+checkMesh -case "$CASE" | tee "$CASE/log.checkMesh"
+echo "[2/2] Solving with foamRun -solver fluid"
+foamRun -solver fluid -case "$CASE" | tee "$CASE/log.foamRun"
+grep -q 'Mesh OK' "$CASE/log.checkMesh"
+grep -q '^End$' "$CASE/log.foamRun"
+printf '\nSuccess: %s\n' "$CASE"

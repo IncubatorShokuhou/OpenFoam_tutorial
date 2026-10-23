@@ -1,0 +1,10 @@
+nx 24
+ny 16
+nz 12
+hAir 180
+pRef 101325
+rho0 1.2
+originX 447435
+originY 4419195
+crs EPSG:32650
+cells 4608

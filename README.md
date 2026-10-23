@@ -43,18 +43,31 @@ OpenFoam_tutorial/
 ├── plot_atmospheric.sh             # 导出 VTK 并画地形风场图
 ├── requirements-post.txt           # 方腔流绘图依赖
 ├── requirements-terrain.txt        # DEM 转 STL 依赖
-├── requirements-era5.txt           # 可选：下载 ERA5 边界表
+├── requirements-era5.txt           # ERA5：CDS 下载，或读样本 NetCDF
+├── requirements-gfs.txt            # GFS：eccodes 解码 GRIB2 子集
+├── requirements-wrf.txt            # wrfout：netCDF4 消错位
 ├── cases/atmospheric/              # 大气算例的字典模板
+├── examples/                       # 五个可直接 Allrun 的景山算例
+│   ├── jingshan_openmeteo/         # ICON + ZBAA，积到 360 s
+│   ├── era5/                       # 标明合成的 ERA5 形状 NetCDF
+│   ├── gfs/                        # 2025-01-15 00Z 的真实 GFS 柱
+│   ├── wrfout/                     # 标明合成的 wrfout
+│   └── csv_obs/                    # 观测宽表示例和空模板
 ├── tools/
 │   ├── plot_cavity.py              # 读取真实 VTK，画速度/压力图
 │   ├── plot_atmospheric.py         # 地形、网格、风、位温、比湿
 │   ├── atmospheric_case.py         # 由 DEM 和气象表写算例
-│   ├── fetch_era5_boundary.py      # 可选：CDS 下载 ERA5 垂直柱
+│   ├── fetch_era5_boundary.py      # CDS 或样本 NetCDF → 边界表
+│   ├── fetch_gfs_boundary.py       # AWS GFS GRIB2 子集 → 边界表
 │   ├── fetch_openmeteo_boundary.py # 无 key：ICON 气压层、ERA5 地面、ZBAA
+│   ├── wrfout_to_boundary.py       # wrfout 消错位 → 边界表
+│   ├── csv_obs_to_boundary.py      # 观测宽表 → 边界表
 │   └── dem_to_stl.py               # 投影 GeoTIFF → ASCII STL
 ├── tests/
 │   ├── test_dem_to_stl.py          # 用 2×2 小 DEM 检查 STL 转换
-│   └── test_atmospheric_case.py    # 气象表、网格和景山算例准备
+│   ├── test_atmospheric_case.py    # 气象表、网格和景山算例准备
+│   ├── test_met_sources.py         # ERA5 样本、GFS 索引、wrfout、侧面边界
+│   └── test_csv_obs.py             # 观测宽表的列检查
 └── tutorial/
     ├── README.md                    # 课程导航
     ├── 00_openfoam_basics.md        # 物理、网格、场、求解器
@@ -64,6 +77,10 @@ OpenFoam_tutorial/
     ├── 04_parallel_and_paraview.md  # MPI 分区和 ParaView
     ├── 05_real_terrain.md           # 气象输入上限、DEM、大气算例
     ├── 06_python_visualization.md   # 大气算例和方腔流的图
+    ├── 07_era5_inlet.md             # ERA5 气压层进边界
+    ├── 08_gfs_inlet.md              # GFS GRIB2 进边界
+    ├── 09_wrfout_inlet.md           # wrfout 消错位后进边界
+    ├── 10_csv_obs_inlet.md          # 自己填的观测宽表
     └── images/                      # 教程图和真实运行结果
 ```
 
@@ -128,8 +145,11 @@ Success: .../work/cavity
 - ASCII VTK 导出及 Matplotlib 真实结果图；
 - 投影 GeoTIFF 到 STL 的自动测试；
 - 景山 Copernicus GLO-30 裁剪，水平 720 m × 480 m，空气柱 180 m，24 × 16 × 12 共 4608 个六面体；
-- `checkMesh` 为 `Mesh OK`，`foamRun -solver fluid` 积到 t = 20 的 `ExecutionTime` 为 0.60 s；
-- 气象强迫取 2025-01-15 00:00–02:00 UTC 的 ICON 气压层、ERA5 地面量诊断的热通量和 ZBAA 地面风。
+- `examples/jingshan_openmeteo` 上 `checkMesh` 为 `Mesh OK`，`foamRun -solver fluid` 积到 t = 360 的 `ExecutionTime` 为 4.01 s；
+- 气象强迫取 2025-01-15 00:00–02:00 UTC 的 ICON 气压层、ERA5 地面量诊断的热通量和 ZBAA 地面风；
+- `examples/gfs` 用 NOAA GFS 2025-01-15 00Z 的真实柱积到 120 s，`ExecutionTime` 1.45 s；
+- `examples/era5` 和 `examples/wrfout` 用标明合成的样本积到 120 s，各约 1.4 s；
+- `examples/csv_obs` 用由景山表改写的观测宽表积到 120 s，`ExecutionTime` 1.43 s。
 
 官方来源：[OpenFOAM v14](https://github.com/OpenFOAM/OpenFOAM-14)、
 [ThirdParty v14](https://github.com/OpenFOAM/ThirdParty-14)、
