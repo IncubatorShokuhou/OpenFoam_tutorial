@@ -1,59 +1,122 @@
-# OpenFOAM 从零开始：编译、运行与真实地形
+# OpenFOAM v14 零基础教程：从“看不懂”到能讲给别人听
 
-这套教程写给第一次接触 OpenFOAM 的读者。它使用 **OpenFOAM Foundation v14**，锁定到
-补丁标签 `20261008`，先实际编译源码，再从最小方腔流算例逐步走到并行计算和真实地形。
+这不是命令备忘录，而是一套给大一学生准备的实验课。默认你只会在 Linux 终端中输入命令，
+不知道 CFD、有限体积法、边界条件或 OpenFOAM 是什么。
 
-OpenFOAM 不是一个带“新建工程”按钮的单体软件，而是一组 CFD 求解器、网格和后处理工具。
-一个算例就是一棵目录；字典文件描述物理量、网格、数值格式和运行控制。
+我们采用费曼学习法。每一课都重复六个动作：
 
-## 最短上手路径
+1. **先用日常语言讲**：不靠术语也能知道它在做什么；
+2. **再看一张图**：把文件、物理世界和计算步骤对应起来；
+3. **打开真实文件**：不把配置文件当黑盒；
+4. **亲手运行**：每条命令都说明输入、输出和成功标志；
+5. **看真实结果**：图片由本仓库实际算出的数据生成；
+6. **合上教程复述**：答不出“为什么”，就回到对应小节。
 
-Ubuntu 22.04/24.04/26.04 先安装系统依赖：
+![从物理问题到图片的 OpenFOAM 工作流](tutorial/images/openfoam_workflow.svg)
+
+## 你最终会完成什么
+
+先模拟一个边长 0.1 m 的方盒。盒子装满流体，上盖以 1 m/s 向右移动。上盖像手掌推水，
+会带动盒内形成一个旋涡。这叫 **lid-driven cavity（顶盖驱动方腔流）**。
+
+下面不是概念图，而是本仓库在 OpenFOAM v14 中算到 `t=10 s` 后，由 VTK 数据重新绘制的
+真实结果：
+
+![方腔流的网格、速度和压力真实结果](tutorial/images/cavity_result.png)
+
+## 仓库目录结构
+
+和 MPAS 教程一样，程序、教程、工具、测试与生成数据严格分开：
+
+```text
+OpenFoam_tutorial/
+├── README.md                       # 你正在读的总入口
+├── AGENTS.md                       # 仓库维护规则
+├── install_openfoam.sh             # 下载并编译 OpenFOAM v14
+├── env.sh                          # 把 OpenFOAM 命令加入当前终端环境
+├── run_cavity.sh                   # 串行方腔流：网格→检查→求解
+├── run_cavity_parallel.sh          # MPI 并行方腔流：分区→求解→重构
+├── plot_cavity.sh                  # 导出 VTK 并生成速度/压力结果图
+├── download_dem.sh                 # 按经纬度下载 Copernicus GLO-30 DEM
+├── requirements-post.txt           # 方腔流绘图依赖
+├── requirements-terrain.txt        # DEM 转 STL 依赖
+├── tools/
+│   ├── plot_cavity.py              # 读取真实 VTK，画速度/压力图
+│   └── dem_to_stl.py               # 投影 GeoTIFF → ASCII STL
+├── tests/
+│   └── test_dem_to_stl.py          # 用 2×2 小 DEM 检查 STL 转换
+└── tutorial/
+    ├── README.md                    # 课程导航
+    ├── 00_openfoam_basics.md        # 物理、网格、场、求解器
+    ├── 01_compile_openfoam.md       # 下载、编译、环境、验收
+    ├── 02_first_cavity_case.md      # 第一个方腔流实验
+    ├── 03_case_anatomy.md           # 逐文件读 0/constant/system
+    ├── 04_parallel_and_paraview.md  # MPI 分区和 ParaView
+    ├── 05_real_terrain.md           # DEM→投影→STL→snappyHexMesh
+    ├── 06_python_visualization.md   # VTK→NumPy→Matplotlib
+    └── images/                      # 教程图和真实运行结果
+```
+
+运行以后还会出现下面这些目录，但它们体积大、可以重新生成，所以 `.gitignore` 不提交：
+
+```text
+OpenFoam_tutorial/
+├── downloads/                      # 官方源码压缩包缓存
+├── local/
+│   ├── OpenFOAM-14/                # OpenFOAM 源码和编译产物
+│   └── ThirdParty-14/               # Scotch、Zoltan 等第三方库
+├── logs/                           # 编译日志
+├── .venv/                          # Python 后处理环境
+└── work/
+    ├── cavity/                     # 串行算例和各时刻结果
+    ├── cavity_parallel/            # 并行算例、processor* 子域
+    └── terrain/                    # DEM、投影栅格和 STL
+```
+
+## 第一次上机：只做这五步
+
+Ubuntu 22.04/24.04/26.04：
 
 ```bash
+# 1. 安装“造程序所需的工具”。这一步只需做一次。
 sudo apt update
 sudo apt install build-essential flex bison git curl ca-certificates \
     openmpi-bin libopenmpi-dev zlib1g-dev libreadline-dev
-```
 
-然后运行：
-
-```bash
+# 2. 下载本教程。
 git clone https://github.com/IncubatorShokuhou/OpenFoam_tutorial.git
 cd OpenFoam_tutorial
+
+# 3. 下载并编译 OpenFOAM。8 表示最多同时做 8 份编译工作。
 ./install_openfoam.sh -j 8
+
+# 4. 告诉“这个终端”OpenFOAM 安装在哪里。新终端需重新执行。
 source ./env.sh
+
+# 5. 复制官方方腔算例、生成网格、检查网格并求解。
 ./run_cavity.sh
 ```
 
-编译产物约占数 GB。`-j` 越大越快，但内存占用也越高；个人电脑建议从 4 或 8 开始。
-每次打开新终端，都要先执行 `source ./env.sh`。
+成功时最后出现：
 
-## 推荐学习顺序
+```text
+End
+Success: .../work/cavity
+```
 
-| 课次 | 主题 | 学完能够回答 |
-|---|---|---|
-| [0](tutorial/00_openfoam_basics.md) | CFD 与 OpenFOAM | 求解器、网格、场和算例分别是什么？ |
-| [1](tutorial/01_compile_openfoam.md) | 下载与编译 | 源码从哪里来，如何判断编译成功？ |
-| [2](tutorial/02_first_cavity_case.md) | 第一个方腔流 | 如何从网格生成一直运行到结果？ |
-| [3](tutorial/03_case_anatomy.md) | 算例目录 | `0/constant/system` 分别控制什么？ |
-| [4](tutorial/04_parallel_and_paraview.md) | 并行与可视化 | 如何分区、并行求解、重构和看图？ |
-| [5](tutorial/05_real_terrain.md) | 真实地形 | DEM 去哪下载、用什么格式、怎样变成 STL？ |
+不要只看命令是否返回。继续按[课程导航](tutorial/README.md)学习，直到你能解释每一步的
+输入、输出和物理意义。
 
-## 已提供的入口
+## 当前经过实际验证的范围
 
-- `install_openfoam.sh`：下载官方源码、编译 ThirdParty 和 OpenFOAM，可重复运行。
-- `env.sh`：装载 OpenFOAM 环境，必须用 `source`。
-- `run_cavity.sh`：复制官方算例、划网格、检查、串行求解。
-- `run_cavity_parallel.sh`：四进程并行示范，可用 `NP=8` 修改进程数。
-- `download_dem.sh`：用 OpenTopography API key 按经纬度范围下载 Copernicus GLO-30。
-- `tools/dem_to_stl.py`：把已投影的 GeoTIFF DEM 转为 ASCII STL 地形表面。
+- Ubuntu 22.04、GCC 11、系统 OpenMPI 4.1；
+- OpenFOAM Foundation v14，源码补丁标签 `20261008`；
+- ThirdParty、OpenFOAM 全量编译；
+- 400 单元方腔流串行运行；
+- 4 个 MPI rank 分区、并行求解和结果重构；
+- ASCII VTK 导出及 Matplotlib 真实结果图；
+- 投影 GeoTIFF 到 STL 的自动测试。
 
-源码、编译产物、下载缓存、运行结果和大型地形文件都不会提交到 Git。
-
-## 官方来源
-
-- OpenFOAM v14 源码：<https://github.com/OpenFOAM/OpenFOAM-14>
-- ThirdParty v14：<https://github.com/OpenFOAM/ThirdParty-14>
-- 官方下载说明：<https://openfoam.org/download/14-source/>
-- 官方用户指南：<https://doc.cfd.direct/openfoam/user-guide-v14/>
+官方来源：[OpenFOAM v14](https://github.com/OpenFOAM/OpenFOAM-14)、
+[ThirdParty v14](https://github.com/OpenFOAM/ThirdParty-14)、
+[v14 源码安装说明](https://openfoam.org/download/14-source/)。

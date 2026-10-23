@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="610" viewBox="0 0 1100 610">
+  <style>.h{font:700 28px sans-serif;fill:#173042}.t{font:21px monospace;fill:#173042}.s{font:18px sans-serif;fill:#314c5f}.line{stroke:#54778f;stroke-width:3}</style>
+  <rect width="1100" height="610" fill="#f8fbfd"/>
+  <text class="h" x="45" y="55">work/cavity/：一个算例就是一个“实验文件夹”</text>
+  <text class="t" x="70" y="115">cavity/</text><line class="line" x1="105" y1="130" x2="105" y2="535"/>
+  <text class="t" x="140" y="165">0/</text><text class="s" x="340" y="165">实验开始时：U、p、k、epsilon…</text>
+  <text class="t" x="185" y="205">U</text><text class="s" x="340" y="205">每个位置的速度初值 + 每面墙的速度规则</text>
+  <text class="t" x="185" y="245">p</text><text class="s" x="340" y="245">每个位置的运动压力初值 + 边界规则</text>
+  <text class="t" x="140" y="300">constant/</text><text class="s" x="340" y="300">实验中基本不变：物性、模型、生成后的网格</text>
+  <text class="t" x="185" y="340">physicalProperties</text><text class="s" x="530" y="340">运动黏度 ν</text>
+  <text class="t" x="185" y="380">polyMesh/</text><text class="s" x="530" y="380">points、faces、owner、neighbour、boundary</text>
+  <text class="t" x="140" y="435">system/</text><text class="s" x="340" y="435">怎样做实验：网格、时间、离散格式、求解控制</text>
+  <text class="t" x="185" y="475">blockMeshDict</text><text class="s" x="530" y="475">盒子几何和每个方向分几格</text>
+  <text class="t" x="185" y="515">controlDict</text><text class="s" x="530" y="515">用哪个求解模块、算多久、多久写一次</text>
+  <text class="t" x="140" y="570">0.5/ … 10/</text><text class="s" x="340" y="570">程序算出的快照；不是输入，不应手工编造</text>
+</svg>
