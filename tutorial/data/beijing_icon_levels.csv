@@ -1,0 +1,43 @@
+# Open-Meteo Historical Forecast API, model icon_global.
+# URL: https://historical-forecast-api.open-meteo.com/v1/forecast?latitude=39.9%2C39.96&longitude=116.39%2C116.39&start_date=2025-01-15&end_date=2025-01-15&hourly=temperature_2m%2Crelative_humidity_2m%2Csurface_pressure%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_speed_100m%2Cwind_direction_100m%2Ctemperature_1000hPa%2Crelative_humidity_1000hPa%2Cwind_speed_1000hPa%2Cwind_direction_1000hPa%2Cgeopotential_height_1000hPa%2Ctemperature_975hPa%2Crelative_humidity_975hPa%2Cwind_speed_975hPa%2Cwind_direction_975hPa%2Cgeopotential_height_975hPa%2Ctemperature_950hPa%2Crelative_humidity_950hPa%2Cwind_speed_950hPa%2Cwind_direction_950hPa%2Cgeopotential_height_950hPa&models=icon_global&wind_speed_unit=ms&timezone=GMT
+# Fetched 2026-10-23. lat/lon/elevation are the grid cell the API returned.
+# Units: temperature C, wind m/s, direction degrees, geopotential height m ASL,
+# surface_pressure hPa. Pressure-level pressure is the level itself.
+# archive-api.open-meteo.com?models=era5 returns null for these pressure-level names.
+station,utc,latitude,longitude,elevation_m,level,z_asl_m,z_agl_m,t_c,rh_percent,wind_ms,direction_deg,p_hpa
+south_icon,2025-01-15T00:00Z,39.87500,116.37500,45,10m,55,10,,,1.48,208,1030.3
+south_icon,2025-01-15T00:00Z,39.87500,116.37500,45,100m,145,100,,,5.25,217,
+south_icon,2025-01-15T00:00Z,39.87500,116.37500,45,2m,47,2,-7.8,39,,,1030.3
+south_icon,2025-01-15T00:00Z,39.87500,116.37500,45,1000hPa,278,233,-5.6,26,5.12,219,1000
+south_icon,2025-01-15T00:00Z,39.87500,116.37500,45,975hPa,476.55,431.55,-6.5,25,3.97,251,975
+south_icon,2025-01-15T00:00Z,39.87500,116.37500,45,950hPa,679,634,-7.3,24,4.52,288,950
+south_icon,2025-01-15T01:00Z,39.87500,116.37500,45,10m,55,10,,,1.61,210,1030.3
+south_icon,2025-01-15T01:00Z,39.87500,116.37500,45,100m,145,100,,,5.48,221,
+south_icon,2025-01-15T01:00Z,39.87500,116.37500,45,2m,47,2,-6.9,35,,,1030.3
+south_icon,2025-01-15T01:00Z,39.87500,116.37500,45,1000hPa,279,234,-5.4,25,4.96,228,1000
+south_icon,2025-01-15T01:00Z,39.87500,116.37500,45,975hPa,477.55,432.55,-6.2,24,4.22,267,975
+south_icon,2025-01-15T01:00Z,39.87500,116.37500,45,950hPa,680,635,-7,22,5.55,302,950
+south_icon,2025-01-15T02:00Z,39.87500,116.37500,45,10m,55,10,,,1.75,211,1029.7
+south_icon,2025-01-15T02:00Z,39.87500,116.37500,45,100m,145,100,,,4.65,229,
+south_icon,2025-01-15T02:00Z,39.87500,116.37500,45,2m,47,2,-4.9,29,,,1029.7
+south_icon,2025-01-15T02:00Z,39.87500,116.37500,45,1000hPa,274,229,-4.7,22,4.03,240,1000
+south_icon,2025-01-15T02:00Z,39.87500,116.37500,45,975hPa,473.04,428.04,-5.6,21,4.44,283,975
+south_icon,2025-01-15T02:00Z,39.87500,116.37500,45,950hPa,676,631,-6.6,20,6.52,308,950
+north_icon,2025-01-15T00:00Z,40.00000,116.37500,49,10m,59,10,,,1.7,208,1029.6
+north_icon,2025-01-15T00:00Z,40.00000,116.37500,49,100m,149,100,,,5.47,226,
+north_icon,2025-01-15T00:00Z,40.00000,116.37500,49,2m,51,2,-7.9,39,,,1029.6
+north_icon,2025-01-15T00:00Z,40.00000,116.37500,49,1000hPa,277,228,-5.1,24,5.16,234,1000
+north_icon,2025-01-15T00:00Z,40.00000,116.37500,49,975hPa,475.55,426.55,-6.2,24,5.59,271,975
+north_icon,2025-01-15T00:00Z,40.00000,116.37500,49,950hPa,678,629,-7.3,23,7.65,294,950
+north_icon,2025-01-15T01:00Z,40.00000,116.37500,49,10m,59,10,,,1.92,208,1029.7
+north_icon,2025-01-15T01:00Z,40.00000,116.37500,49,100m,149,100,,,6.17,227,
+north_icon,2025-01-15T01:00Z,40.00000,116.37500,49,2m,51,2,-6.9,34,,,1029.7
+north_icon,2025-01-15T01:00Z,40.00000,116.37500,49,1000hPa,278,229,-4.9,23,5.44,238,1000
+north_icon,2025-01-15T01:00Z,40.00000,116.37500,49,975hPa,476.55,427.55,-6,23,5.88,276,975
+north_icon,2025-01-15T01:00Z,40.00000,116.37500,49,950hPa,679,630,-7.1,22,8.19,300,950
+north_icon,2025-01-15T02:00Z,40.00000,116.37500,49,10m,59,10,,,2.02,213,1029.1
+north_icon,2025-01-15T02:00Z,40.00000,116.37500,49,100m,149,100,,,5.55,234,
+north_icon,2025-01-15T02:00Z,40.00000,116.37500,49,2m,51,2,-4.8,28,,,1029.1
+north_icon,2025-01-15T02:00Z,40.00000,116.37500,49,1000hPa,274,225,-4.4,21,4.78,250,1000
+north_icon,2025-01-15T02:00Z,40.00000,116.37500,49,975hPa,473.04,424.04,-5.5,21,6.29,285,975
+north_icon,2025-01-15T02:00Z,40.00000,116.37500,49,950hPa,676,627,-6.7,21,9.1,303,950

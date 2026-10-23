@@ -1,0 +1,9 @@
+# Ground sensible-heat flux into the air, W/m2, for externalTemperature.
+# Derived from ERA5 via the Open-Meteo archive, not from ERA5 sshf.
+# H = 1.2 * 1004.5 * 0.002 * max(U10, 0.5) * (Tsoil - T2m).
+# ERA5 grid cell and inputs: beijing_era5_surface.csv. Positive heats the fluid.
+# time_s uses the same 00:00Z / 01:00Z / 02:00Z compression as beijing_boundary.csv.
+time_s,q_Wm2
+0,21.755059
+10,12.410798
+20,2.434908
